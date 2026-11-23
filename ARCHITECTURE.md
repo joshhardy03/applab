@@ -34,3 +34,13 @@ Nothing is built on the server. Native Android/iOS builds go through EAS Build (
 - `package-lock.json` is regenerated on the server with
   `systemd-run --user --scope -p MemoryMax=450M npm install --package-lock-only --ignore-scripts`
   (resolves versions without downloading packages).
+
+## Backends for apps
+
+- Apps that need accounts use **Supabase** (free tier), never this server. Each app keeps
+  `apps/<slug>/supabase/schema.sql` (idempotent, pasted into the Supabase SQL editor) and
+  `test.sql` (access-rule checks). CI job `db-tests` runs both on a throwaway Postgres with a
+  stub `auth` schema (`ci-auth-stub.sql`) before any build or deploy.
+- The Supabase URL and anon key reach the build as GitHub Actions **variables**
+  (`SUPABASE_URL`, `SUPABASE_ANON_KEY`), exposed to Expo as `EXPO_PUBLIC_*`. The service-role
+  key is never used by apps or stored anywhere in this project.

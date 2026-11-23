@@ -53,6 +53,17 @@ against its own number, not today.
 4. **Friends** (placeholder in v1): explains groups and leaderboards are coming.
 5. **Settings:** privacy policy, delete all data, version.
 
+## v0.2 (23 Nov 2026): accounts, groups, leaderboard, reminders, new UI
+- Supabase backend: schema + row-level security in `supabase/schema.sql`, checked in CI by
+  `supabase/test.sql` on a throwaway Postgres. Sign-up = name + colour (anonymous auth).
+- Groups with invite link (`/preview/dailyquiz/?join=CODE`) or code; today's board shows each
+  member's result per game; weekly totals; nudge; leave. Global leaderboard (today / week).
+- Daily reminder notification on phones. Live once Josh creates the Supabase project and sets
+  the `SUPABASE_URL` and `SUPABASE_ANON_KEY` GitHub Actions variables; until then the app runs
+  on-device only and shows "Accounts aren't switched on yet".
+- Known limits: anonymous accounts are tied to the device (no email recovery yet); scores
+  are self-reported.
+
 ## Phase plan
 - **v1 (this POC):** everything stored on the phone (AsyncStorage; localStorage on web).
   No accounts, no network calls except opening game links.
