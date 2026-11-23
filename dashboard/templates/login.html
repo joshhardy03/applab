@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>App Lab</h1>
+<form class="card" method="post">
+  {% if error %}<p class="flash">{{ error }}</p>{% endif %}
+  <p><input type="password" name="password" placeholder="Password" autofocus required></p>
+  <button type="submit">Log in</button>
+</form>
+{% endblock %}

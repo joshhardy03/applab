@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>App Lab</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1b1f24; --muted:#5f6b7a; --line:#dde2e8; --accent:#2f6fde; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#111418; --card:#1a1f25; --text:#e6e9ed; --muted:#97a2b0; --line:#2c333b; --accent:#6c9cff; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.45 system-ui, sans-serif; background:var(--bg); color:var(--text); }
+  main { max-width:900px; margin:0 auto; padding:16px; }
+  h1 { font-size:1.4rem; margin:.2rem 0 1rem; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:14px; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; font-size:.85rem; }
+  input, select, textarea, button { font:inherit; padding:8px 10px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--text); }
+  button { background:var(--accent); color:#fff; border:0; cursor:pointer; }
+  form.inline { display:inline; }
+  .muted { color:var(--muted); font-size:.9rem; }
+  .flash { color:#c0392b; }
+  .grid { display:grid; gap:8px; grid-template-columns:1fr; }
+  @media (min-width:640px) { .grid { grid-template-columns:1fr 2fr; } }
+  a { color:var(--accent); }
+  .top { display:flex; justify-content:space-between; align-items:center; }
+</style>
+</head>
+<body><main>{% block body %}{% endblock %}</main></body>
+</html>

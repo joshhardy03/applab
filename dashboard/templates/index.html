@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="top">
+  <h1>App Lab</h1>
+  <form class="inline" method="post" action="{{ url_for('main.logout') }}"><button type="submit">Log out</button></form>
+</div>
+{% for msg in get_flashed_messages() %}<p class="flash">{{ msg }}</p>{% endfor %}
+
+<div class="card">
+  {% if apps %}
+  <table>
+    <tr><th>App</th><th>Status</th><th>Preview</th></tr>
+    {% for a in apps %}
+    <tr>
+      <td><strong>{{ a.name }}</strong> <span class="muted">{{ a.slug }}</span>
+          {% if a.idea %}<div class="muted">{{ a.idea }}</div>{% endif %}</td>
+      <td>
+        <form class="inline" method="post" action="{{ url_for('main.set_status', slug=a.slug) }}">
+          <select name="status" onchange="this.form.submit()">
+            {% for s in statuses %}<option value="{{ s }}" {% if s == a.status %}selected{% endif %}>{{ s }}</option>{% endfor %}
+          </select>
+        </form>
+      </td>
+      <td>{% if a.has_preview %}<a href="{{ url_for('main.preview_root', slug=a.slug) }}">Play</a>{% else %}<span class="muted">none yet</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">No apps yet.</p>
+  {% endif %}
+</div>
+
+<form class="card grid" method="post" action="{{ url_for('main.add_app') }}">
+  <input name="slug" placeholder="slug (e.g. blockdrop)" required>
+  <input name="name" placeholder="Name" required>
+  <textarea name="idea" placeholder="Idea (a sentence or two)" style="grid-column:1/-1"></textarea>
+  <div><button type="submit">Add app</button></div>
+</form>
+<p class="muted">Downloads, retention and revenue arrive in phase 2.</p>
+{% endblock %}

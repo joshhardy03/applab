@@ -53,14 +53,15 @@ It's trial and error: expect most apps to earn nothing, and a few to earn someth
 | Dashboard | Python Flask + SQLite on this server, same pattern as `~/reseller`, at `apps.trade-bot.uk`. |
 | Release region | UK and US first (skips the EU's public trader-address requirement); EU later if Josh is happy to be listed as a trader. |
 | Platforms | **Android first.** Josh has only a Samsung phone (no iPhone, no Mac), so iOS can't be tested on a device. Apple account and iOS releases wait until there's an iPhone to test on; keep code iOS-ready. |
-| Previews | **Public** at `apps.trade-bot.uk/preview/<slug>/` (no login). |
+| Previews | **Public** at `apps.trade-bot.uk/preview/<slug>/` (no login), served by Flask from `data/previews/` (nginx can't read `/home/botuser`). |
+| Bundle id | **`uk.tradebot.<slug>`** (Josh left it to Claude, 23 Nov). Matches the owned domain; never visible to players. Permanent once published. |
+| Play store account | Personal vs company: Josh decides after the first proof of concept. |
 
 ### Open decisions (ask Josh)
 
 | Topic | Question |
 |---|---|
 | Account type | **Personal or company** developer accounts? Personal: Apple shows his legal name as seller; Google may show his address publicly once an app has ads or IAP (check current rule). Company (a Ltd + free D-U-N-S number) avoids both and, on Google, skips the closed-test requirement. Hard to switch later, so decide before paying. |
-| Bundle id | `uk.tradebot.<slug>`? Permanent once an app is published. |
 
 ---
 
@@ -111,11 +112,24 @@ The session can start phases 1–2 before any of this exists.
 ## 6. Server, deploy and DNS
 
 Copy the `~/reseller` pattern (read `~/reseller/CLAUDE.md` §12–13 and `~/reseller/deploy/`; copy, never import):
-- `deploy/deploy.sh`: refuses on uncommitted changes, `git pull --ff-only`, installs Python deps, runs tests, **downloads** the latest preview builds from GitHub Actions (never builds them), restarts `applab-web`, logs to `data/deploy.log`.
-- `~/webhook.py`: add a `/deploy/applab` route with its own `APPLAB_WEBHOOK_SECRET` in `~/.webhook_secrets.env`. Josh restarts the webhook service.
+- **Flow:** push to `main` → GitHub Actions (`.github/workflows/previews.yml`) exports every app's web preview, force-pushes them as one commit to the `previews` branch, then POSTs a signed request to `/deploy/applab` → `~/webhook.py` runs `deploy/deploy.sh`. There is **no GitHub repo webhook**: the workflow is the only trigger, so deploys always see finished previews.
+- `deploy/deploy.sh`: refuses on uncommitted changes, `git pull --ff-only`, installs Python deps, runs tests, unpacks the `previews` branch into `data/previews/` (never builds), restarts `applab-web`, logs to `data/deploy.log`.
+- `~/webhook.py`: `/deploy/applab` route added 23 Nov (copy of the reseller route; backup at `~/webhook.py.bak-applab`). `APPLAB_WEBHOOK_SECRET` is in `~/.webhook_secrets.env` and must also be a GitHub Actions secret of the same name.
 - `deploy/nginx-applab.conf` copied from the reseller one: `server_name apps.trade-bot.uk`, proxy to `127.0.0.1:5080`, Cloudflare origin certificate, `/preview/` served as static files from `data/previews/`.
 - Josh runs the one-off `sudo` steps (units, nginx site, sudoers line) and adds the Cloudflare **A record `apps` → `178.105.87.94`, proxied**. Write those commands out for him exactly, like reseller §12–13.
 - 1 gunicorn worker.
+
+### Josh runs these once
+```bash
+sudo cp /home/botuser/applab/deploy/applab-web.service /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now applab-web
+sudo cp /home/botuser/applab/deploy/nginx-applab.conf /etc/nginx/sites-available/applab
+sudo ln -sf /etc/nginx/sites-available/applab /etc/nginx/sites-enabled/applab
+sudo nginx -t && sudo systemctl reload nginx
+echo 'botuser ALL=(ALL) NOPASSWD: /bin/systemctl restart applab-web' | sudo tee /etc/sudoers.d/applab && sudo chmod 440 /etc/sudoers.d/applab && sudo visudo -cf /etc/sudoers.d/applab
+sudo systemctl restart webhook
+```
+Then GitHub → repo → Settings → Secrets and variables → Actions → New repository secret `APPLAB_WEBHOOK_SECRET` (value: `grep APPLAB_WEBHOOK_SECRET ~/.webhook_secrets.env | cut -d= -f2`). Dashboard password: `grep APPLAB_PASSWORD ~/applab/.env | cut -d= -f2`.
 
 ---
 
@@ -132,6 +146,6 @@ Copy the `~/reseller` pattern (read `~/reseller/CLAUDE.md` §12–13 and `~/rese
 
 1. Read this file and `~/reseller/CLAUDE.md` (for house style and deploy pattern).
 2. `git init`, `.gitignore` (`.env`, `data/`, `node_modules/`, keystores, `*.p8`, `*.json` service accounts), README. Private GitHub repo.
-3. Done 23 Nov: git repo, `.gitignore`, README. Node 20.20 / npm 10.8 are installed. Check `free -m` and `df -h` before any `npm install`.
+3. Done 23 Nov: git repo (private, `joshhardy03/applab`), `.gitignore`, README, minimal dashboard (login, app list, public previews), deploy files, preview workflow, webhook route. Node 20.20 / npm 10.8 are installed. Check `free -m` and `df -h` before any `npm install`.
 4. Ask Josh the open decisions in §3 and for his first idea (or offer 3), then do phase 1.
 5. Keep an `ARCHITECTURE.md` and update this file when decisions change.
