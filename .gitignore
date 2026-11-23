@@ -1,0 +1,33 @@
+# secrets
+.env
+.env.*
+*.keystore
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+service-account*.json
+*-service-account.json
+google-services.json
+GoogleService-Info.plist
+credentials.json
+
+# runtime data (db, logs, downloaded previews)
+data/
+
+# node / expo
+node_modules/
+.expo/
+dist/
+web-build/
+*.tsbuildinfo
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# os / editor
+.DS_Store
+*.swp
