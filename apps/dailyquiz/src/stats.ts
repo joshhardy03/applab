@@ -7,7 +7,7 @@ export type GameStats = {
   winPct: number; // 0-100
   currentStreak: number; // wins in a row (Wordle/Connections) or plays in a row (Chainle)
   bestStreak: number;
-  average: number | null; // wordle: avg guesses in wins; connections: avg mistakes in wins; chainle: avg points
+  average: number | null; // wordle: avg guesses in wins; connections/travle: avg mistakes/extra guesses in wins; chainle: avg points
   best: number | null; // chainle best points
   distribution: { label: string; count: number }[];
 };
@@ -55,6 +55,14 @@ export function gameStats(results: Result[], game: GameId, now: Date = new Date(
     distribution = ["0", "1", "2", "3", "Lost"].map((label, i) => ({
       label: label === "Lost" ? label : `${label} mistakes`.replace(/^1 mistakes$/, "1 mistake"),
       count: mine.filter((r) => (label === "Lost" ? !r.won : r.won && r.score === i)).length,
+    }));
+    average = avg(wins.map((r) => r.score));
+  } else if (game === "travle") {
+    distribution = ["+0", "+1", "+2", "+3", "+4 or more", "Lost"].map((label, i) => ({
+      label,
+      count: mine.filter((r) =>
+        label === "Lost" ? !r.won : r.won && (i === 4 ? r.score >= 4 : r.score === i),
+      ).length,
     }));
     average = avg(wins.map((r) => r.score));
   } else {

@@ -47,6 +47,16 @@ test("chainle streak counts plays, plus average and best", () => {
   assert.equal(s.average, 3200);
 });
 
+test("travle distribution buckets", () => {
+  const s = gameStats(
+    [r("travle", 1437, true, 0), r("travle", 1438, true, 5), r("travle", 1439, false, 2), r("travle", 1440, true, 2)],
+    "travle", NOW,
+  );
+  assert.deepEqual(s.distribution.map((d) => d.count), [1, 0, 1, 0, 1, 1]);
+  assert.equal(s.currentStreak, 1);
+  assert.equal(s.average, (0 + 5 + 2) / 3);
+});
+
 test("empty stats", () => {
   const s = gameStats([], "connections", NOW);
   assert.equal(s.played, 0);

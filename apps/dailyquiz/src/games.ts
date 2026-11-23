@@ -1,8 +1,8 @@
-// The three v1 games: links, share-text parsers, puzzle numbering and daily points.
+// The v1 games: links, share-text parsers, puzzle numbering and daily points.
 // We only read the text a player chooses to share; we never embed or copy the games.
 import { addDays, daysBetween, localDayKey, utcDayKey } from "@applab/core/dates";
 
-export type GameId = "wordle" | "connections" | "chainle";
+export type GameId = "wordle" | "connections" | "chainle" | "travle";
 
 export type Result = {
   id: string; // `${game}-${number}`
@@ -10,9 +10,11 @@ export type Result = {
   number: number;
   day: string; // the puzzle's own day (YYYY-MM-DD)
   won: boolean;
-  /** wordle: guesses (7 = failed); connections: mistakes; chainle: points (0-5000) */
+  /** wordle: guesses (7 = failed); connections: mistakes; chainle: points (0-5000);
+   *  travle: extra guesses over the shortest route (win) or countries away (loss) */
   score: number;
   hard?: boolean;
+  hints?: number;
   grid: string[];
   points: number; // daily points, see SPEC.md
   addedAt: string; // ISO time
@@ -46,6 +48,11 @@ export const GAMES: GameDef[] = [
     id: "chainle", name: "Chainle", url: "https://chainle.io",
     blurb: "Find the words that link the chains.", maxPoints: 5,
     firstDay: "2026-08-20", firstNumber: 1, utc: true,
+  },
+  {
+    id: "travle", name: "Travle", url: "https://travle.earth",
+    blurb: "Get from one country to another through their neighbours.", maxPoints: 5,
+    firstDay: "2022-12-15", firstNumber: 1, utc: false,
   },
 ];
 
@@ -131,6 +138,32 @@ function parseChainle(text: string, now: Date): Omit<Result, "id" | "day" | "add
   };
 }
 
+// ── Travle: "#travle #1440 (hard mode) +2 (1 hint)" or "#travle #1440 (3 away)",
+// then a row of ✅🟩🟧🟥. Other maps (#travle_usa …) and practice aren't counted.
+const TRAVLE_RE = /#travle\s+#\s*([\d,.]+)([^\n]*)/i;
+const TRAVLE_SQ = new Set(["✅", "🟩", "🟧", "🟥"]);
+
+function parseTravle(text: string): Omit<Result, "id" | "day" | "addedAt"> | null {
+  const m = TRAVLE_RE.exec(text);
+  if (!m) return null;
+  const rest = m[2];
+  const plus = /\+(\d+)/.exec(rest);
+  const away = /\((\d+)\s+away\)/i.exec(rest);
+  if (!plus && !away) return null;
+  const hints = Number(/\((\d+)\s+hints?\)/i.exec(rest)?.[1] ?? 0);
+  const won = Boolean(plus);
+  const score = won ? Number(plus![1]) : Number(away![1]);
+  const grid = text
+    .slice(m.index + m[0].length)
+    .split(/\s+/)
+    .filter((w) => chars(w).length >= 1 && chars(w).every((c) => TRAVLE_SQ.has(c)));
+  return {
+    game: "travle", number: digits(m[1]), won, score,
+    hard: /\(hard mode\)/i.test(rest), hints, grid: grid.slice(0, 1),
+    points: won ? Math.max(1, 5 - score - hints) : 0,
+  };
+}
+
 export type ParseOutcome =
   | { ok: true; results: Result[] }
   | { ok: false; error: string };
@@ -138,16 +171,16 @@ export type ParseOutcome =
 /** Find every supported game result in a pasted block of text. */
 export function parseShareText(text: string, now: Date = new Date()): ParseOutcome {
   if (!text || !text.trim()) return { ok: false, error: "Nothing to add: the text is empty." };
-  if (/Chainle\s+Unlimited/i.test(text) && !/Wordle|Connections/i.test(text)) {
+  if (/Chainle\s+Unlimited/i.test(text) && !/Wordle|Connections|#travle\s/i.test(text)) {
     return { ok: false, error: "That's a Chainle Unlimited result. Only the daily puzzle counts." };
   }
-  const found = [parseWordle(text), parseConnections(text), parseChainle(text, now)].filter(
+  const found = [parseWordle(text), parseConnections(text), parseChainle(text, now), parseTravle(text)].filter(
     (r): r is NonNullable<typeof r> => r !== null,
   );
   if (found.length === 0) {
     return {
       ok: false,
-      error: "Couldn't find a Wordle, Connections or Chainle result. Use the game's Share button and paste the whole text.",
+      error: "Couldn't find a Wordle, Connections, Chainle or Travle result. Use the game's Share button and paste the whole text.",
     };
   }
   const addedAt = now.toISOString();
@@ -172,5 +205,10 @@ export function describe(r: Result): string {
       return r.score === 0 ? "Perfect" : `${r.score} mistake${r.score === 1 ? "" : "s"}`;
     case "chainle":
       return `${r.score.toLocaleString("en-GB")} pts`;
+    case "travle": {
+      if (!r.won) return `${r.score} away`;
+      const base = r.score === 0 && !r.hints ? "Perfect" : `+${r.score}`;
+      return r.hints ? `${base}, ${r.hints} hint${r.hints === 1 ? "" : "s"}` : base;
+    }
   }
 }

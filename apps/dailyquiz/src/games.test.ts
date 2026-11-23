@@ -41,10 +41,16 @@ Beat 72% of players
 🟩🟨🟧🟥🟩
 https://chainle.io`;
 
+const TRAVLE = `#travle #1440 +2
+✅🟩✅🟧✅
+https://travle.earth`;
+
 test("puzzle numbering matches each game's start date", () => {
   assert.equal(todayNumber("wordle", NOW), 1983);
   assert.equal(todayNumber("connections", NOW), 1261);
   assert.equal(todayNumber("chainle", NOW), 96);
+  assert.equal(todayNumber("travle", NOW), 1440);
+  assert.equal(dayOfNumber("travle", 1), "2022-12-15");
   assert.equal(dayOfNumber("wordle", 0), "2021-06-19");
   assert.equal(dayOfNumber("connections", 1261), "2026-11-23");
   assert.equal(dayOfNumber("chainle", 1), "2026-08-20");
@@ -112,10 +118,47 @@ test("chainle unlimited is rejected", () => {
   assert.equal(out.ok, false);
 });
 
-test("all three pasted together", () => {
-  const out = parseShareText(`${WORDLE}\n\n${CONN_WIN}\n\n${CHAINLE}`, NOW);
+test("travle win, perfect, hints, hard mode and loss", () => {
+  const win = parseShareText(TRAVLE, NOW);
+  assert.ok(win.ok);
+  const [r] = win.results;
+  assert.equal(r.game, "travle");
+  assert.equal(r.number, 1440);
+  assert.equal(r.won, true);
+  assert.equal(r.score, 2);
+  assert.equal(r.points, 3);
+  assert.deepEqual(r.grid, ["✅🟩✅🟧✅"]);
+  assert.equal(describe(r), "+2");
+
+  const perfect = parseShareText("#travle #1440 +0 (Perfect)\n✅✅✅\nhttps://travle.earth", NOW);
+  assert.ok(perfect.ok);
+  assert.equal(perfect.results[0].points, 5);
+  assert.equal(describe(perfect.results[0]), "Perfect");
+
+  const hard = parseShareText("#travle #1439 (hard mode) +1 (2 hints)\n✅🟧✅", NOW);
+  assert.ok(hard.ok);
+  assert.equal(hard.results[0].hard, true);
+  assert.equal(hard.results[0].hints, 2);
+  assert.equal(hard.results[0].points, 2);
+  assert.equal(describe(hard.results[0]), "+1, 2 hints");
+
+  const loss = parseShareText("#travle #1440 (3 away)\n🟥🟧🟥🟥🟥🟥🟥🟥🟥🟥🟥\nhttps://travle.earth", NOW);
+  assert.ok(loss.ok);
+  assert.equal(loss.results[0].won, false);
+  assert.equal(loss.results[0].score, 3);
+  assert.equal(loss.results[0].points, 0);
+  assert.equal(describe(loss.results[0]), "3 away");
+});
+
+test("travle other maps and practice are not counted", () => {
+  assert.equal(parseShareText("#travle_usa #900 +1\n✅🟩", NOW).ok, false);
+  assert.equal(parseShareText("#travle_practice +1\n✅🟩", NOW).ok, false);
+});
+
+test("all four pasted together", () => {
+  const out = parseShareText(`${WORDLE}\n\n${CONN_WIN}\n\n${CHAINLE}\n\n${TRAVLE}`, NOW);
   assert.ok(out.ok);
-  assert.deepEqual(out.results.map((r) => r.game), ["wordle", "connections", "chainle"]);
+  assert.deepEqual(out.results.map((r) => r.game), ["wordle", "connections", "chainle", "travle"]);
   assert.equal(out.results[0].grid.length, 4);
   assert.equal(out.results[1].grid.length, 5);
 });

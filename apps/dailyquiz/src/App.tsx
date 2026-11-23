@@ -26,6 +26,7 @@ const GAME_COLOUR: Record<GameId, string> = {
   wordle: "#2f9e44",
   connections: "#7048e8",
   chainle: "#e8590c",
+  travle: "#1c7ed6",
 };
 
 function confirm(message: string, onYes: () => void) {
@@ -218,7 +219,7 @@ function StatsScreen({ s, t, results }: { s: Styles; t: Theme; results: Result[]
               <Stat s={s} label="Best streak" value={String(st.bestStreak)} />
             </View>
             <Text style={[s.muted, { marginBottom: 6 }]}>
-              {g.id === "wordle" ? "Average guesses (wins)" : g.id === "connections" ? "Average mistakes (wins)" : "Average points"}: {avgText}
+              {g.id === "wordle" ? "Average guesses (wins)" : g.id === "connections" ? "Average mistakes (wins)" : g.id === "travle" ? "Average extra guesses (wins)" : "Average points"}: {avgText}
             </Text>
             {st.distribution.map((d) => (
               <View key={d.label} style={s.barRow}>
