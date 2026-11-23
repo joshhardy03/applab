@@ -17,7 +17,38 @@ permissions:
   contents: write
 
 jobs:
+  # Each app's Supabase schema + access-rule tests, on a throwaway Postgres.
+  db-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Schema and access-rule tests
+        run: |
+          for app in apps/*/; do
+            [ -f "$app/supabase/schema.sql" ] || continue
+            echo "== $app"
+            psql -v ON_ERROR_STOP=1 -q -c "drop database if exists t" -c "create database t"
+            # schema applied twice: it must be safe to re-run in the Supabase SQL editor
+            psql -v ON_ERROR_STOP=1 -q -d t \
+              -f "$app/supabase/ci-auth-stub.sql" \
+              -f "$app/supabase/schema.sql" -f "$app/supabase/schema.sql" \
+              -f "$app/supabase/test.sql"
+          done
+
   build-and-deploy:
+    needs: db-tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +71,10 @@ jobs:
         run: npm run typecheck
 
       - name: Export web previews
+        env:
+          # Public by design (shipped in every app); kept as repo variables, not in git.
+          EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
         run: |
           mkdir -p out
           for dir in apps/*/; do

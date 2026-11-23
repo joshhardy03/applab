@@ -2,7 +2,7 @@
   "expo": {
     "name": "Daily Quiz Tracker",
     "slug": "dailyquiz",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -16,10 +16,15 @@
       "output": "single",
       "bundler": "metro",
       "name": "Daily Quiz Tracker",
-      "shortName": "Daily Quiz"
+      "shortName": "Daily Quiz",
+      "themeColor": "#3b5bdb"
     },
     "experiments": {
       "baseUrl": "/preview/dailyquiz"
-    }
+    },
+    "scheme": "dailyquiz",
+    "plugins": [
+      "expo-notifications"
+    ]
   }
 }
