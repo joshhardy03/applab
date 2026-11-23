@@ -1,0 +1,68 @@
+# Builds the web preview of every app in apps/ (Expo web export), publishes them as a
+# single commit on the `previews` branch, then asks the server to deploy.
+# Builds run here, never on the server. Each app's app.json sets
+# expo.experiments.baseUrl = "/preview/<slug>" so assets load from the right path.
+name: previews
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: previews
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        if: hashFiles('package-lock.json') != ''
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        if: hashFiles('package-lock.json') != ''
+        run: npm ci
+
+      - name: Export web previews
+        run: |
+          mkdir -p out
+          for dir in apps/*/; do
+            [ -f "$dir/app.json" ] || continue
+            slug=$(basename "$dir")
+            echo "Exporting $slug"
+            (cd "$dir" && npx expo export --platform web --output-dir "$GITHUB_WORKSPACE/out/$slug")
+          done
+          ls out
+
+      - name: Publish to previews branch
+        run: |
+          if [ -z "$(ls -A out)" ]; then echo "No apps yet; nothing to publish."; exit 0; fi
+          cd out
+          git init -q -b previews
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Previews for ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" previews
+
+      - name: Trigger deploy on the server
+        env:
+          SECRET: ${{ secrets.APPLAB_WEBHOOK_SECRET }}
+        run: |
+          if [ -z "$SECRET" ]; then echo "APPLAB_WEBHOOK_SECRET not set; skipping deploy." ; exit 0; fi
+          payload='{"ref":"refs/heads/main"}'
+          sig="sha256=$(printf '%s' "$payload" | openssl dgst -sha256 -hmac "$SECRET" -r | cut -d' ' -f1)"
+          curl -fsS -X POST https://apps.trade-bot.uk/deploy/applab \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Event: push" \
+            -H "X-Hub-Signature-256: $sig" \
+            --data "$payload"
