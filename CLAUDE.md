@@ -52,7 +52,7 @@ It's trial and error: expect most apps to earn nothing, and a few to earn someth
 | Idea testing | Before a store release, try ideas as web builds on **itch.io** (easiest) or CrazyGames (needs its SDK), or as short TikTok gameplay clips. Poki is invite-only. Josh decides what to post. |
 | Dashboard | Python Flask + SQLite on this server, same pattern as `~/reseller`, at `apps.trade-bot.uk`. |
 | Release region | UK and US first (skips the EU's public trader-address requirement); EU later if Josh is happy to be listed as a trader. |
-| Platforms | **Android first.** Josh has only a Samsung phone (no iPhone, no Mac), so iOS can't be tested on a device. Apple account and iOS releases wait until there's an iPhone to test on; keep code iOS-ready. |
+| Platforms | **Android and iOS** (Josh, 23 Nov 2026). Josh has only a Samsung (no iPhone, no Mac): iOS builds and submits run on EAS in the cloud using an App Store Connect API key; iOS testing via TestFlight on testers' iPhones (borrow or buy a cheap iPhone for hands-on checks). Apple individual account shows Josh's legal name as seller. |
 | Previews | **Public** at `apps.trade-bot.uk/preview/<slug>/` (no login), served by Flask from `data/previews/` (nginx can't read `/home/botuser`). |
 | Bundle id | **`uk.tradebot.<slug>`** (Josh left it to Claude, 23 Nov). Matches the owned domain; never visible to players. Permanent once published. |
 | Play store account | **Personal** Google Play account (Josh, 23 Nov 2026), accepting that "About the developer" shows his legal name and payments-profile address; listing uses a brand developer name. Revisit a Ltd + virtual office if apps earn. |
@@ -68,7 +68,7 @@ It's trial and error: expect most apps to earn nothing, and a few to earn someth
 ## 4. Josh does these (needs his ID and payment details)
 
 1. **Google Play developer account** ($25 one-off). New **personal** accounts must run a **closed test with 12 testers for 14 days** before going to production. This likely applies **per app**, not once per account: verify before planning release timing. Organisation accounts are exempt.
-2. **Apple Developer Program** (about £79/year): **deferred** until there's an iPhone to test on.
+2. **Apple Developer Program** (about £79/year), individual. Then an **App Store Connect API key** (.p8, Key ID, Issuer ID) for EAS; the .p8 stays out of git.
 3. **Expo account**, then give the session an `EXPO_TOKEN` in `.env` (and as a GitHub Actions secret).
 4. **AdMob** and **RevenueCat** accounts, and a **Firebase** project. AdMob API access needs a one-off OAuth sign-in by Josh (no service account).
 5. Tax and bank details on both stores. App income counts as trading income (like the reselling).
