@@ -55,7 +55,7 @@ It's trial and error: expect most apps to earn nothing, and a few to earn someth
 | Platforms | **Android first.** Josh has only a Samsung phone (no iPhone, no Mac), so iOS can't be tested on a device. Apple account and iOS releases wait until there's an iPhone to test on; keep code iOS-ready. |
 | Previews | **Public** at `apps.trade-bot.uk/preview/<slug>/` (no login), served by Flask from `data/previews/` (nginx can't read `/home/botuser`). |
 | Bundle id | **`uk.tradebot.<slug>`** (Josh left it to Claude, 23 Nov). Matches the owned domain; never visible to players. Permanent once published. |
-| Play store account | Personal vs company: Josh decides after the first proof of concept. |
+| Play store account | **Personal** Google Play account (Josh, 23 Nov 2026), accepting that "About the developer" shows his legal name and payments-profile address; listing uses a brand developer name. Revisit a Ltd + virtual office if apps earn. |
 
 ### Open decisions (ask Josh)
 
