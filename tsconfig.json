@@ -1,0 +1,14 @@
+{
+  // Used by the Node test runner (tsx) only; each app has its own tsconfig for Expo.
+  "compilerOptions": {
+    "strict": true,
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@applab/core/dates": ["packages/core/src/dates.ts"]
+    }
+  }
+}

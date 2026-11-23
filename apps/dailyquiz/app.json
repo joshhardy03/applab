@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Daily Quiz Tracker",
+    "slug": "dailyquiz",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "uk.tradebot.dailyquiz",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "uk.tradebot.dailyquiz"
+    },
+    "web": {
+      "output": "single",
+      "bundler": "metro",
+      "name": "Daily Quiz Tracker",
+      "shortName": "Daily Quiz"
+    },
+    "experiments": {
+      "baseUrl": "/preview/dailyquiz"
+    }
+  }
+}

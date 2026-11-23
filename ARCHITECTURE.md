@@ -23,3 +23,14 @@ data/                 gitignored: applab.db, previews/, deploy.log, secret_key
 5. `~/webhook.py` checks the HMAC and runs `deploy/deploy.sh`: pull, pip install, pytest, unpack `previews` into `data/previews/`, restart `applab-web`.
 
 Nothing is built on the server. Native Android/iOS builds go through EAS Build (phase 3).
+
+## JS tests and checks
+
+- Pure logic (parsers, stats, dates) lives in plain `.ts` files and is tested with Node's
+  test runner via `tsx` (`npm test`). On the server run them without a full install:
+  `npx --yes tsx@4.23.15 --test packages/*/src/*.test.ts apps/*/src/*.test.ts`
+  (the root `tsconfig.json` maps `@applab/core/dates` so no `node_modules` is needed).
+- `npm ci`, typecheck and web export run only in GitHub Actions (Node 22; Expo SDK 58).
+- `package-lock.json` is regenerated on the server with
+  `systemd-run --user --scope -p MemoryMax=450M npm install --package-lock-only --ignore-scripts`
+  (resolves versions without downloading packages).
