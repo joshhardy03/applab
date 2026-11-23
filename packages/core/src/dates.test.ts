@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { addDays, daysBetween, localDayKey, utcDayKey } from "./dates";
+import { addDays, dayKeyIn, daysBetween, localDayKey, utcDayKey } from "./dates";
 
 test("daysBetween across a leap year and DST", () => {
   assert.equal(daysBetween("2024-02-28", "2024-03-01"), 2);
@@ -22,4 +22,12 @@ test("day keys format", () => {
 
 test("bad key throws", () => {
   assert.throws(() => daysBetween("2026-1-1", "2026-01-02"));
+});
+
+test("dayKeyIn handles zones", () => {
+  const lateUtc = new Date(Date.UTC(2026, 10, 24, 3, 0)); // 03:00 UTC 24 Nov = 22:00 23 Nov in New York
+  assert.equal(dayKeyIn("utc", lateUtc), "2026-11-24");
+  assert.equal(dayKeyIn("America/New_York", lateUtc), "2026-11-23");
+  assert.match(dayKeyIn("local", lateUtc), /^\d{4}-\d{2}-\d{2}$/);
+  assert.match(dayKeyIn("Not/AZone", lateUtc), /^\d{4}-\d{2}-\d{2}$/);
 });

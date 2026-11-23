@@ -57,6 +57,17 @@ test("travle distribution buckets", () => {
   assert.equal(s.average, (0 + 5 + 2) / 3);
 });
 
+test("points and factor games: best, average and bands", () => {
+  const k = (n: number, score: number): Result => ({ ...r("krillion", n, true, score), max: 700 });
+  const s = gameStats([k(129, 650), k(130, 500), k(131, 300)], "krillion", NOW);
+  assert.equal(s.best, 650);
+  assert.equal(s.currentStreak, 3);
+  assert.deepEqual(s.distribution.map((d) => d.count), [1, 0, 1, 1]);
+  const f = gameStats([r("fermi", 119, true, 1.4), r("fermi", 120, true, 6)], "fermi", NOW);
+  assert.equal(f.best, 1.4);
+  assert.deepEqual(f.distribution.map((d) => d.count), [1, 0, 0, 0, 1]);
+});
+
 test("empty stats", () => {
   const s = gameStats([], "connections", NOW);
   assert.equal(s.played, 0);

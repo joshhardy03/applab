@@ -7,7 +7,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { AdSlot, logEvent, PrivacyPolicy, Theme, useTheme } from "@applab/core";
 import {
-  GAMES, GameId, MAX_DAILY_POINTS, Result, describe, parseShareText, todayNumber,
+  GAMES, GameDef, GameId, MAX_DAILY_POINTS, Result, describe, parseShareText, todayNumber,
 } from "./games";
 import { byDay, gameStats } from "./stats";
 import { useResults } from "./store";
@@ -27,6 +27,14 @@ const GAME_COLOUR: Record<GameId, string> = {
   connections: "#7048e8",
   chainle: "#e8590c",
   travle: "#1c7ed6",
+  wonderhop: "#d6336c",
+  crowdict: "#0ca678",
+  fermi: "#5c7cfa",
+  eraly: "#f59f00",
+  wheronaut: "#15aabf",
+  farflung: "#a9772f",
+  krillion: "#e64980",
+  maptap: "#37b24d",
 };
 
 function confirm(message: string, onYes: () => void) {
@@ -146,6 +154,28 @@ function TodayScreen({ s, t, results, onAdd }: {
         <Text style={s.muted}>{done} of {GAMES.length} played</Text>
       </View>
 
+      <View style={s.card}>
+        <Text style={s.h2}>Add a result</Text>
+        <Text style={[s.muted, { marginBottom: 8 }]}>
+          Finish a puzzle, tap Share in the game, then paste it here. You can paste several at once.
+        </Text>
+        <Pressable style={[s.button, { alignSelf: "flex-start", marginBottom: 10 }]} onPress={pasteFromClipboard}>
+          <Text style={s.buttonText}>Paste from clipboard</Text>
+        </Pressable>
+        <TextInput
+          style={s.input}
+          multiline
+          value={text}
+          onChangeText={setText}
+          placeholder={"Wordle 1,983 4/6\n\n⬛🟨⬛⬛⬛\n…"}
+          placeholderTextColor={t.muted}
+        />
+        <Pressable style={[s.button, { alignSelf: "flex-start", marginTop: 10 }]} onPress={() => submit(text)}>
+          <Text style={s.buttonText}>Save result</Text>
+        </Pressable>
+        {msg ? <Text style={[s.msg, { color: msg.ok ? t.good : t.bad }]}>{msg.text}</Text> : null}
+      </View>
+
       {todays.map(({ g, n, r }) => (
         <View key={g.id} style={[s.card, s.row, { borderLeftColor: GAME_COLOUR[g.id], borderLeftWidth: 5 }]}>
           <View style={{ flex: 1 }}>
@@ -168,28 +198,6 @@ function TodayScreen({ s, t, results, onAdd }: {
           )}
         </View>
       ))}
-
-      <View style={s.card}>
-        <Text style={s.h2}>Add a result</Text>
-        <Text style={[s.muted, { marginBottom: 8 }]}>
-          Finish a puzzle, tap Share in the game, then paste it here. You can paste several at once.
-        </Text>
-        <Pressable style={[s.button, { alignSelf: "flex-start", marginBottom: 10 }]} onPress={pasteFromClipboard}>
-          <Text style={s.buttonText}>Paste from clipboard</Text>
-        </Pressable>
-        <TextInput
-          style={s.input}
-          multiline
-          value={text}
-          onChangeText={setText}
-          placeholder={"Wordle 1,983 4/6\n\n⬛🟨⬛⬛⬛\n…"}
-          placeholderTextColor={t.muted}
-        />
-        <Pressable style={[s.button, { alignSelf: "flex-start", marginTop: 10 }]} onPress={() => submit(text)}>
-          <Text style={s.buttonText}>Save result</Text>
-        </Pressable>
-        {msg ? <Text style={[s.msg, { color: msg.ok ? t.good : t.bad }]}>{msg.text}</Text> : null}
-      </View>
     </View>
   );
 }
@@ -201,17 +209,14 @@ function StatsScreen({ s, t, results }: { s: Styles; t: Theme; results: Result[]
       {GAMES.map((g) => {
         const st = gameStats(results, g.id);
         const maxCount = Math.max(1, ...st.distribution.map((d) => d.count));
-        const avgText =
-          st.average == null ? "–"
-          : g.id === "chainle" ? Math.round(st.average).toLocaleString("en-GB")
-          : st.average.toFixed(1);
+        const scored = g.kind === "points" || g.kind === "factor";
         return (
           <View key={g.id} style={[s.card, { borderLeftColor: GAME_COLOUR[g.id], borderLeftWidth: 5 }]}>
             <Text style={s.h2}>{g.name}</Text>
             <View style={s.statRow}>
               <Stat s={s} label="Played" value={String(st.played)} />
-              {g.id === "chainle" ? (
-                <Stat s={s} label="Best" value={st.best == null ? "–" : st.best.toLocaleString("en-GB")} />
+              {scored ? (
+                <Stat s={s} label="Best" value={st.best == null ? "–" : formatScore(g, st.best)} />
               ) : (
                 <Stat s={s} label="Win %" value={String(st.winPct)} />
               )}
@@ -219,7 +224,7 @@ function StatsScreen({ s, t, results }: { s: Styles; t: Theme; results: Result[]
               <Stat s={s} label="Best streak" value={String(st.bestStreak)} />
             </View>
             <Text style={[s.muted, { marginBottom: 6 }]}>
-              {g.id === "wordle" ? "Average guesses (wins)" : g.id === "connections" ? "Average mistakes (wins)" : g.id === "travle" ? "Average extra guesses (wins)" : "Average points"}: {avgText}
+              {AVERAGE_LABEL[g.kind]}: {st.average == null ? "–" : formatScore(g, st.average)}
             </Text>
             {st.distribution.map((d) => (
               <View key={d.label} style={s.barRow}>
@@ -241,6 +246,20 @@ function StatsScreen({ s, t, results }: { s: Styles; t: Theme; results: Result[]
       <AdSlot placement="stats" />
     </View>
   );
+}
+
+const AVERAGE_LABEL: Record<GameDef["kind"], string> = {
+  guesses: "Average guesses (wins)",
+  mistakes: "Average mistakes (wins)",
+  extra: "Average extra guesses (wins)",
+  points: "Average score",
+  factor: "Average (lower is better)",
+};
+
+function formatScore(g: GameDef, n: number): string {
+  if (g.kind === "factor") return `${n < 10 ? n.toFixed(2) : n.toFixed(1)}×`;
+  if (g.kind === "points") return Math.round(n).toLocaleString("en-GB");
+  return n.toFixed(1);
 }
 
 function Stat({ s, label, value }: { s: Styles; label: string; value: string }) {
@@ -379,7 +398,7 @@ function makeStyles(t: Theme) {
     statValue: { color: t.text, fontSize: 22, fontWeight: "800" },
     statLabel: { color: t.muted, fontSize: 12, textAlign: "center" },
     barRow: { flexDirection: "row", alignItems: "center", marginVertical: 2 },
-    barLabel: { color: t.muted, width: 78, fontSize: 12 },
+    barLabel: { color: t.muted, width: 92, fontSize: 12 },
     barTrack: { flex: 1, height: 16 },
     bar: { height: 16, borderRadius: 4 },
     barCount: { color: t.text, width: 30, textAlign: "right", fontSize: 13 },

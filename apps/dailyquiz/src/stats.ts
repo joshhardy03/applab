@@ -1,14 +1,14 @@
 // Stats from stored results. Pure functions so they're easy to test.
-import { GAMES, GameId, Result, todayNumber } from "./games";
+import { GAME_BY_ID, GAMES, GameId, Result, todayNumber } from "./games";
 
 export type GameStats = {
   played: number;
   wins: number;
   winPct: number; // 0-100
-  currentStreak: number; // wins in a row (Wordle/Connections) or plays in a row (Chainle)
+  currentStreak: number; // wins in a row (games you can lose) or plays in a row (scored games)
   bestStreak: number;
-  average: number | null; // wordle: avg guesses in wins; connections/travle: avg mistakes/extra guesses in wins; chainle: avg points
-  best: number | null; // chainle best points
+  average: number | null; // games you can lose: average over wins; scored games: average score
+  best: number | null; // scored games: best score (lowest for factor games)
   distribution: { label: string; count: number }[];
 };
 
@@ -35,45 +35,50 @@ function streakCounts(byNumber: Map<number, Result>, today: number, counts: (r: 
 }
 
 export function gameStats(results: Result[], game: GameId, now: Date = new Date()): GameStats {
+  const def = GAME_BY_ID[game];
   const mine = results.filter((r) => r.game === game);
   const byNumber = new Map(mine.map((r) => [r.number, r]));
   const wins = mine.filter((r) => r.won);
-  const counts = game === "chainle" ? () => true : (r: Result) => r.won;
+  const hasLosses = def.kind === "guesses" || def.kind === "mistakes" || def.kind === "extra";
+  const counts = hasLosses ? (r: Result) => r.won : () => true;
   const { current, best } = streakCounts(byNumber, todayNumber(game, now), counts);
   const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 
   let distribution: GameStats["distribution"] = [];
   let average: number | null = null;
   let bestScore: number | null = null;
-  if (game === "wordle") {
-    distribution = ["1", "2", "3", "4", "5", "6", "X"].map((label, i) => ({
-      label,
-      count: mine.filter((r) => (label === "X" ? !r.won : r.won && r.score === i + 1)).length,
-    }));
-    average = avg(wins.map((r) => r.score));
-  } else if (game === "connections") {
-    distribution = ["0", "1", "2", "3", "Lost"].map((label, i) => ({
-      label: label === "Lost" ? label : `${label} mistakes`.replace(/^1 mistakes$/, "1 mistake"),
-      count: mine.filter((r) => (label === "Lost" ? !r.won : r.won && r.score === i)).length,
-    }));
-    average = avg(wins.map((r) => r.score));
-  } else if (game === "travle") {
-    distribution = ["+0", "+1", "+2", "+3", "+4 or more", "Lost"].map((label, i) => ({
-      label,
-      count: mine.filter((r) =>
-        label === "Lost" ? !r.won : r.won && (i === 4 ? r.score >= 4 : r.score === i),
-      ).length,
-    }));
-    average = avg(wins.map((r) => r.score));
-  } else {
-    const bands: [string, number, number][] = [
-      ["4,500+", 4500, 5001], ["3,500+", 3500, 4500], ["2,500+", 2500, 3500], ["<2,500", 0, 2500],
-    ];
-    distribution = bands.map(([label, lo, hi]) => ({
-      label, count: mine.filter((r) => r.score >= lo && r.score < hi).length,
-    }));
-    average = avg(mine.map((r) => r.score));
-    bestScore = mine.length ? Math.max(...mine.map((r) => r.score)) : null;
+  const bucket = (labels: string[], pick: (r: Result) => number) =>
+    labels.map((label, i) => ({ label, count: mine.filter((r) => pick(r) === i).length }));
+
+  switch (def.kind) {
+    case "guesses":
+      distribution = bucket(["1", "2", "3", "4", "5", "6", "X"], (r) => (r.won ? r.score - 1 : 6));
+      average = avg(wins.map((r) => r.score));
+      break;
+    case "mistakes":
+      distribution = bucket(["0 mistakes", "1 mistake", "2 mistakes", "3 mistakes", "Lost"],
+        (r) => (r.won ? r.score : 4));
+      average = avg(wins.map((r) => r.score));
+      break;
+    case "extra":
+      distribution = bucket(["+0", "+1", "+2", "+3", "+4 or more", "Lost"],
+        (r) => (r.won ? Math.min(r.score, 4) : 5));
+      average = avg(wins.map((r) => r.score));
+      break;
+    case "factor":
+      distribution = bucket(["Under 1.5×", "1.5–2×", "2–3×", "3–5×", "5× or more"], (r) =>
+        r.score < 1.5 ? 0 : r.score < 2 ? 1 : r.score < 3 ? 2 : r.score < 5 ? 3 : 4);
+      average = avg(mine.map((r) => r.score));
+      bestScore = mine.length ? Math.min(...mine.map((r) => r.score)) : null;
+      break;
+    case "points": {
+      const pct = (r: Result) => (r.max ? r.score / r.max : 0);
+      distribution = bucket(["90% or more", "75–89%", "50–74%", "Under 50%"], (r) =>
+        pct(r) >= 0.9 ? 0 : pct(r) >= 0.75 ? 1 : pct(r) >= 0.5 ? 2 : 3);
+      average = avg(mine.map((r) => r.score));
+      bestScore = mine.length ? Math.max(...mine.map((r) => r.score)) : null;
+      break;
+    }
   }
 
   return {

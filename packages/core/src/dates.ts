@@ -32,3 +32,22 @@ export function daysBetween(a: string, b: string): number {
 export function addDays(key: string, n: number): string {
   return utcDayKey(new Date(keyToUtcMs(key) + n * DAY_MS));
 }
+
+/**
+ * Day key in a time zone: "local" (device), "utc", or an IANA zone such as
+ * "America/New_York". Falls back to the device's local day if the zone isn't supported.
+ */
+export function dayKeyIn(zone: string, d: Date = new Date()): string {
+  if (zone === "local") return localDayKey(d);
+  if (zone === "utc") return utcDayKey(d);
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(d);
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+    const key = `${get("year")}-${get("month")}-${get("day")}`;
+    return /^\d{4}-\d{2}-\d{2}$/.test(key) ? key : localDayKey(d);
+  } catch {
+    return localDayKey(d);
+  }
+}
